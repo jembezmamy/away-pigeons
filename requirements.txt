@@ -1,0 +1,4 @@
+picamera
+pillow
+
+# + ffmpeg installed in $PATH
