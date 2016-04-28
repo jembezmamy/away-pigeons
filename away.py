@@ -4,9 +4,10 @@ from functools import reduce
 import operator
 import picamera
 from PIL import Image
-from PIL import ImageChops
 import time
 import subprocess
+import os
+import motion_detector
 
 prior_image = None
 file_number = 1
@@ -26,13 +27,10 @@ def detect_motion(camera):
         current_image = Image.open(stream)
         # Compare current_image to prior_image to detect motion. This is
         # left as an exercise for the reader!
-        h = ImageChops.difference(current_image, prior_image).histogram()
-        change = math.sqrt(reduce(operator.add,
-            map(lambda h, i: h*(i**2), h, range(256))
-        ) / (float(current_image.size[0]) * current_image.size[1]))
+        any_motion = motion_detector.detect(current_image, prior_image, 128, 0.0003)
         # Once motion detection is done, make the prior image the current
         prior_image = current_image
-        return change > 20
+        return any_motion
 
 def write_video(stream, name):
     # Write the entire content of the circular buffer to disk. No need to
@@ -59,13 +57,13 @@ def process_video():
 
     print("Processing video")
 
-    video_list = open("list.txt", "w")
+    video_list = open("tmp/list.txt", "w")
     for i in range(1, file_number):
         video_list.write("file video%s.h264\n" % i)
     video_list.close()
 
     output_file_path = "output/%d.mp4" % time.time()
-    subprocess.call(["ffmpeg", "-f", "concat", "-i", "list.txt", "-c", "copy", output_file_path])
+    subprocess.call(["ffmpeg", "-f", "concat", "-i", "tmp/list.txt", "-c", "copy", output_file_path])
 
     publish_video(output_file_path)
 
@@ -76,6 +74,8 @@ def process_video():
 def publish_video(path):
     print("Publishing video")
     subprocess.call(["Dropbox-Uploader/dropbox_uploader.sh", "upload", path, "away-pigeons/" + path])
+    print("Deleting file")
+    os.remove(path)
     print("Done")
 
 
@@ -88,16 +88,16 @@ with picamera.PiCamera() as camera:
     print('Started watching')
     try:
         while True:
-            camera.wait_recording(0)
+            camera.wait_recording(1)
             if detect_motion(camera):
                 print('Motion detected!')
                 last_video_started_at = time.time()
 
                 # As soon as we detect motion, split the recording to
                 # record the frames "after" motion
-                camera.split_recording("video%d.h264" % (file_number + 1))
+                camera.split_recording("tmp/video%d.h264" % (file_number + 1))
                 # Write the 10 seconds "before" motion to disk as well
-                write_video(stream, "video%d.h264" % file_number)
+                write_video(stream, "tmp/video%d.h264" % file_number)
                 file_number += 2
 
                 current_length = total_video_length
@@ -106,7 +106,7 @@ with picamera.PiCamera() as camera:
                 # recording back to the in-memory circular buffer
                 while current_length < 15 and detect_motion(camera):
                     current_length = total_video_length + time.time() - last_video_started_at
-                    camera.wait_recording(0)
+                    camera.wait_recording(1)
 
                 print('Motion stopped!')
                 last_video_ended_at = time.time()
