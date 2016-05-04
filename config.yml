@@ -1,0 +1,12 @@
+recording:
+  margin: 5
+  maximum_chunk_length: 30
+  maximum_video_length: 300
+  maximum_recording_time: 1800
+  maximum_idle_time: 300
+  motion_detection:
+    interval: 1
+    threshold: 128
+    minimum_area: 0.0003
+composing:
+  maximum_video_length: 30

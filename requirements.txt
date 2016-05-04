@@ -1,4 +1,6 @@
 picamera
 pillow
+numpy
+pyyaml
 
 # + ffmpeg installed in $PATH

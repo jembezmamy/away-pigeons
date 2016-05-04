@@ -8,12 +8,22 @@ import time
 import subprocess
 import os
 import motion_detector
+import video_composer
+import yaml
+
+config = yaml.safe_load(open("config.yml"))
 
 prior_image = None
 file_number = 1
 total_video_length = 0
+first_video_started_at = 0
 last_video_started_at = 0
 last_video_ended_at = time.time()
+
+if not os.path.exists("tmp"):
+    os.makedirs("tmp")
+if not os.path.exists("tmp/processed"):
+    os.makedirs("tmp/processed")
 
 def detect_motion(camera):
     global prior_image
@@ -27,7 +37,12 @@ def detect_motion(camera):
         current_image = Image.open(stream)
         # Compare current_image to prior_image to detect motion. This is
         # left as an exercise for the reader!
-        any_motion = motion_detector.detect(current_image, prior_image, 128, 0.0003)
+        any_motion = motion_detector.detect(
+            current_image,
+            prior_image,
+            config['recording']['motion_detection']['threshold'],
+            config['recording']['motion_detection']['minimum_area']
+        )
         # Once motion detection is done, make the prior image the current
         prior_image = current_image
         return any_motion
@@ -54,22 +69,21 @@ def process_video():
     global file_number
     global total_video_length
     global prior_image
+    global first_video_started_at
+    global last_video_ended_at
 
     print("Processing video")
 
-    video_list = open("tmp/list.txt", "w")
-    for i in range(1, file_number):
-        video_list.write("file video%s.h264\n" % i)
-    video_list.close()
-
     output_file_path = "output/%d.mp4" % time.time()
-    subprocess.call(["ffmpeg", "-f", "concat", "-i", "tmp/list.txt", "-c", "copy", output_file_path])
 
-    publish_video(output_file_path)
+    if video_composer.compose(file_number, output_file_path, config['composing']['maximum_video_length']):
+        publish_video(output_file_path)
 
     file_number = 1
     total_video_length = 0
     prior_image = None
+    first_video_started_at = 0
+    last_video_ended_at = 0
 
 def publish_video(path):
     print("Publishing video")
@@ -83,15 +97,17 @@ with picamera.PiCamera() as camera:
     camera.resolution = (1280, 720)
     # camera.hflip = True
     # camera.vflip = True
-    stream = picamera.PiCameraCircularIO(camera, seconds=3)
+    stream = picamera.PiCameraCircularIO(camera, seconds=config['recording']['margin'])
     camera.start_recording(stream, format='h264')
     print('Started watching')
     try:
         while True:
-            camera.wait_recording(1)
+            camera.wait_recording(config['recording']['motion_detector']['interval'])
             if detect_motion(camera):
                 print('Motion detected!')
                 last_video_started_at = time.time()
+                if first_video_started_at == 0:
+                    first_video_started_at = time.time()
 
                 # As soon as we detect motion, split the recording to
                 # record the frames "after" motion
@@ -104,9 +120,9 @@ with picamera.PiCamera() as camera:
 
                 # Wait until motion is no longer detected, then split
                 # recording back to the in-memory circular buffer
-                while current_length < 15 and detect_motion(camera):
+                while current_length < config['recording']['maximum_chunk_length'] and detect_motion(camera):
                     current_length = total_video_length + time.time() - last_video_started_at
-                    camera.wait_recording(1)
+                    camera.wait_recording(config['recording']['motion_detector']['interval'])
 
                 print('Motion stopped!')
                 last_video_ended_at = time.time()
@@ -116,10 +132,15 @@ with picamera.PiCamera() as camera:
 
                 camera.split_recording(stream)
 
-                if total_video_length >= 15:
+                if total_video_length >= config['recording']['maximum_video_length']:
+                    print("Maximum video length reached")
                     process_video()
 
-            elif total_video_length > 0 and time.time() - last_video_ended_at > 30:
+            elif first_video_started_at > 0 and time.time() - first_video_started_at > config['recording']['maximum_recording_time']:
+                print("Maximum recording time reached")
+                process_video()
+            elif last_video_ended_at > 0 and time.time() - last_video_ended_at > config['recording']['maximum_idle_time']:
+                print("Maximum idle time reached")
                 process_video()
 
     finally:
