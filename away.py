@@ -74,10 +74,14 @@ def process_video():
 
     print("Processing video")
 
-    output_file_path = "output/%d.mp4" % time.time()
+    timestamp = time.time()
+    output_file_path = "output/%d.mp4" % timestamp
 
-    if video_composer.compose(file_number, output_file_path, config['composing']['maximum_video_length']):
-        publish_video(output_file_path)
+    attractiveness = video_composer.compose(file_number, output_file_path, config['composing'])
+    if rating:
+        publish_video(output_file_path, "away-pigeons/output/%d-%d.mp4" % (
+            timestamp, rating
+        ))
 
     file_number = 1
     total_video_length = 0
@@ -85,11 +89,11 @@ def process_video():
     first_video_started_at = 0
     last_video_ended_at = 0
 
-def publish_video(path):
+def publish_video(path, dropbox_path):
     print("Publishing video")
-    subprocess.call(["Dropbox-Uploader/dropbox_uploader.sh", "upload", path, "away-pigeons/" + path])
+    subprocess.call(["Dropbox-Uploader/dropbox_uploader.sh", "upload", path, dropbox_path])
     print("Deleting file")
-    os.remove(path)
+    # os.remove(path)
     print("Done")
 
 
@@ -102,7 +106,7 @@ with picamera.PiCamera() as camera:
     print('Started watching')
     try:
         while True:
-            camera.wait_recording(config['recording']['motion_detector']['interval'])
+            camera.wait_recording(config['recording']['motion_detection']['interval'])
             if detect_motion(camera):
                 print('Motion detected!')
                 last_video_started_at = time.time()
@@ -122,7 +126,7 @@ with picamera.PiCamera() as camera:
                 # recording back to the in-memory circular buffer
                 while current_length < config['recording']['maximum_chunk_length'] and detect_motion(camera):
                     current_length = total_video_length + time.time() - last_video_started_at
-                    camera.wait_recording(config['recording']['motion_detector']['interval'])
+                    camera.wait_recording(config['recording']['motion_detection']['interval'])
 
                 print('Motion stopped!')
                 last_video_ended_at = time.time()
@@ -134,6 +138,10 @@ with picamera.PiCamera() as camera:
 
                 if total_video_length >= config['recording']['maximum_video_length']:
                     print("Maximum video length reached")
+                    process_video()
+
+                if file_number / 2 > config["recording"]["maximum_chunk_count"]:
+                    print("Maximum chunk count reached")
                     process_video()
 
             elif first_video_started_at > 0 and time.time() - first_video_started_at > config['recording']['maximum_recording_time']:

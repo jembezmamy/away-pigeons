@@ -7,10 +7,43 @@ FFMPEG_BIN = "ffmpeg"
 
 last_image = None
 
-def process(input_file_name, resolution, output_file_name):
-
+def shorten(input_file_name, resolution, output_file_name):
     total_attractiveness = 0
     total_frames = 0
+
+    def process_frame(image):
+        nonlocal total_attractiveness
+        nonlocal total_frames
+        attractiveness = get_attractiveness(image)
+        if attractiveness >= 0.5:
+            total_frames += 1
+            total_attractiveness += attractiveness
+            return image
+        else:
+            return False
+
+    process(input_file_name, resolution, output_file_name, process_frame)
+
+    mean_attractiveness = total_attractiveness / total_frames if total_frames > 0 else 0
+    total_duration = total_frames / 25
+
+    return {
+        'duration': total_duration,
+        'attractiveness': mean_attractiveness
+    }
+
+def postprocess(input_file_name, resolution, output_file_name, config):
+    coeffs = find_coeffs(resolution[0], resolution[1], config)
+
+    def process_frame(image):
+        image = correct_perspective( image, resolution, coeffs)
+        return image
+
+    process(input_file_name, resolution, output_file_name, process_frame)
+
+    
+
+def process(input_file_name, resolution, output_file_name, callback):
 
     command = [ FFMPEG_BIN,
                 '-i', input_file_name,
@@ -40,12 +73,10 @@ def process(input_file_name, resolution, output_file_name):
             image_array = image_array.reshape((resolution[1],resolution[0],3))
             image = Image.fromarray(image_array, 'RGB')
 
-            attractiveness = get_attractiveness(image)
+            output = callback(image)
+            if output:
+                output_pipe.stdin.write( numpy.array(output).tostring() )
 
-            if attractiveness >= 0.5:
-                output_pipe.stdin.write( raw_image )
-                total_frames += 1
-                total_attractiveness += attractiveness
 
             input_pipe.stdout.flush()
         else:
@@ -56,14 +87,6 @@ def process(input_file_name, resolution, output_file_name):
     output_pipe.stdin.close()
     output_pipe.stderr.close()
     output_pipe.wait()
-
-    mean_attractiveness = total_attractiveness / total_frames if total_frames > 0 else 0
-    total_duration = total_frames / 25
-
-    return {
-        'duration': total_duration,
-        'attractiveness': mean_attractiveness
-    }
 
 
 
@@ -79,3 +102,29 @@ def get_attractiveness(image):
             return motion / 2
         else:
             return 0
+
+
+def correct_perspective(image, resolution, coeffs):
+    return image.transform(resolution, Image.PERSPECTIVE, coeffs, Image.BICUBIC)
+
+
+def find_coeffs(width, height, config):
+    pb = [
+        (config["left_top_x"], config["left_top_y"]),
+        (config["right_top_x"], config["right_top_y"]),
+        (config["right_bottom_x"], config["right_bottom_y"]),
+        (config["left_bottom_x"], config["left_bottom_y"])
+    ]
+    pa = [
+        (0, 0), (width, 0), (width, height), (0, height)
+    ]
+    matrix = []
+    for p1, p2 in zip(pa, pb):
+        matrix.append([p1[0], p1[1], 1, 0, 0, 0, -p2[0]*p1[0], -p2[0]*p1[1]])
+        matrix.append([0, 0, 0, p1[0], p1[1], 1, -p2[1]*p1[0], -p2[1]*p1[1]])
+
+    A = numpy.matrix(matrix, dtype=numpy.float)
+    B = numpy.array(pb).reshape(8)
+
+    res = numpy.dot(numpy.linalg.inv(A.T * A) * A.T, B)
+    return numpy.array(res).reshape(8)

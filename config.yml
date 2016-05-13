@@ -1,6 +1,7 @@
 recording:
   margin: 5
   maximum_chunk_length: 30
+  maximum_chunk_count: 30
   maximum_video_length: 300
   maximum_recording_time: 1800
   maximum_idle_time: 300
@@ -10,3 +11,12 @@ recording:
     minimum_area: 0.0003
 composing:
   maximum_video_length: 30
+  # perspective_correction:
+  #   left_top_x: 0
+  #   left_top_y: 0
+  #   right_top_x: 1280
+  #   right_top_y: 0
+  #   right_bottom_x: 1280
+  #   right_bottom_y: 720
+  #   left_bottom_x: 0
+  #   left_bottom_y: 720
