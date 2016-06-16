@@ -1,16 +1,19 @@
 recording:
   margin: 5
-  maximum_chunk_length: 30
-  maximum_chunk_count: 30
-  maximum_video_length: 300
+  maximum_chunk_length: 60
+  maximum_chunk_count: 10
+  maximum_video_length: 120
   maximum_recording_time: 1800
   maximum_idle_time: 300
   motion_detection:
-    interval: 1
+    interval: 5
     threshold: 128
-    minimum_area: 0.0003
+    minimum_area: 0.0002
 composing:
   maximum_video_length: 30
+  shortening:
+    threshold: 64
+    minimum_area: 0.00005
   # perspective_correction:
   #   left_top_x: 0
   #   left_top_y: 0

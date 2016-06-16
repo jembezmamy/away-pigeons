@@ -12,7 +12,8 @@ def compose(file_count, output_file_path, config):
         video_meta = video_processor.shorten(
             "tmp/video%s.h264" % i,
             (1280, 720),
-            "tmp/processed/video%s.h264" % i
+            "tmp/processed/video%s.h264" % i,
+            config["shortening"]
         )
         video_meta['number'] = i
         if video_meta['attractiveness'] > 0:
@@ -52,7 +53,7 @@ def compose(file_count, output_file_path, config):
 
     # join into one
 
-    rating = round(attractiveness / duration)
+    rating = round(attractiveness * 100 / duration)
 
     video_list = open("tmp/list.txt", "w")
     for i in sorted(selected_video_numbers):

@@ -77,11 +77,12 @@ def process_video():
     timestamp = time.time()
     output_file_path = "output/%d.mp4" % timestamp
 
-    attractiveness = video_composer.compose(file_number, output_file_path, config['composing'])
+    rating = video_composer.compose(file_number, output_file_path, config['composing'])
     if rating:
-        publish_video(output_file_path, "away-pigeons/output/%d-%d.mp4" % (
-            timestamp, rating
-        ))
+        output_file_path_with_rating = "output/%d-%d.mp4" % (timestamp, rating)
+        os.rename(output_file_path, output_file_path_with_rating)
+        publish_video(output_file_path_with_rating,
+            "away-pigeons/output/%d-%d.mp4" % (timestamp, rating))
 
     file_number = 1
     total_video_length = 0
@@ -93,7 +94,7 @@ def publish_video(path, dropbox_path):
     print("Publishing video")
     subprocess.call(["Dropbox-Uploader/dropbox_uploader.sh", "upload", path, dropbox_path])
     print("Deleting file")
-    # os.remove(path)
+    os.remove(path)
     print("Done")
 
 

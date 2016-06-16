@@ -7,14 +7,14 @@ FFMPEG_BIN = "ffmpeg"
 
 last_image = None
 
-def shorten(input_file_name, resolution, output_file_name):
+def shorten(input_file_name, resolution, output_file_name, config):
     total_attractiveness = 0
     total_frames = 0
 
     def process_frame(image):
         nonlocal total_attractiveness
         nonlocal total_frames
-        attractiveness = get_attractiveness(image)
+        attractiveness = get_attractiveness(image, config)
         if attractiveness >= 0.5:
             total_frames += 1
             total_attractiveness += attractiveness
@@ -41,7 +41,7 @@ def postprocess(input_file_name, resolution, output_file_name, config):
 
     process(input_file_name, resolution, output_file_name, process_frame)
 
-    
+
 
 def process(input_file_name, resolution, output_file_name, callback):
 
@@ -90,13 +90,18 @@ def process(input_file_name, resolution, output_file_name, callback):
 
 
 
-def get_attractiveness(image):
+def get_attractiveness(image, config):
     global last_image
     if last_image is None:
         last_image = image
         return 1
     else:
-        motion = motion_detector.get_amount_of_motion(image, last_image, 64, 0.0005)
+        motion = motion_detector.get_amount_of_motion(
+            image,
+            last_image,
+            config["threshold"],
+            config["minimum_area"]
+        )
         if motion >= 1:
             last_image = image
             return motion / 2
