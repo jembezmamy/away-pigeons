@@ -1,5 +1,6 @@
 import video_processor
 import subprocess
+import os
 
 def compose(file_count, output_file_path, config):
     meta = []
@@ -9,15 +10,26 @@ def compose(file_count, output_file_path, config):
     # process and rate each video
 
     for i in range(1, file_count):
-        video_meta = video_processor.shorten(
-            "tmp/video%s.h264" % i,
-            (1280, 720),
-            "tmp/processed/video%s.h264" % i,
-            config["shortening"]
-        )
-        video_meta['number'] = i
-        if video_meta['attractiveness'] > 0:
-            meta.append(video_meta)
+        if "shortening" in config:
+            video_meta = video_processor.shorten(
+                "tmp/video%s.h264" % i,
+                (1280, 720),
+                "tmp/processed/video%s.h264" % i,
+                config["shortening"]
+            )
+            video_meta['number'] = i
+            if video_meta['attractiveness'] > 0:
+                meta.append(video_meta)
+        else:
+            os.rename(
+                "tmp/video%s.h264" % i,
+                "tmp/processed/video%s.h264" % i
+            )
+            meta.append({
+                'duration': 1,
+                'attractiveness': 1,
+                'number': i
+            })
 
     if len(meta) == 0:
         return False

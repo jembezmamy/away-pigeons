@@ -1,19 +1,21 @@
 recording:
+  width: 1280
+  height: 720
   margin: 5
   maximum_chunk_length: 60
-  maximum_chunk_count: 10
+  maximum_chunk_count: 1
   maximum_video_length: 120
   maximum_recording_time: 1800
   maximum_idle_time: 300
   motion_detection:
     interval: 5
-    threshold: 128
+    threshold: 0
     minimum_area: 0.0002
-composing:
-  maximum_video_length: 30
-  shortening:
-    threshold: 64
-    minimum_area: 0.00005
+# composing:
+#   maximum_video_length: 30
+  # shortening:
+  #   threshold: 64
+  #   minimum_area: 0.00005
   # perspective_correction:
   #   left_top_x: 0
   #   left_top_y: 0
@@ -23,3 +25,7 @@ composing:
   #   right_bottom_y: 720
   #   left_bottom_x: 0
   #   left_bottom_y: 720
+publishing:
+  # dropbox_path: "profilowka/output/"
+  delete_local: false
+  format: "h264"

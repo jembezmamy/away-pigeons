@@ -75,14 +75,19 @@ def process_video():
     print("Processing video")
 
     timestamp = time.time()
-    output_file_path = "output/%d.mp4" % timestamp
+    file_name = "%d.%s" % (timestamp, config["publishing"]["format"])
+    output_file_path = "output/%s" % (file_name)
 
-    rating = video_composer.compose(file_number, output_file_path, config['composing'])
-    if rating:
-        output_file_path_with_rating = "output/%d-%d.mp4" % (timestamp, rating)
-        os.rename(output_file_path, output_file_path_with_rating)
-        publish_video(output_file_path_with_rating,
-            "away-pigeons/output/%d-%d.mp4" % (timestamp, rating))
+    if "composing" in config:
+        rating = video_composer.compose(file_number, output_file_path, config['composing'])
+        if rating:
+            output_file_path_with_rating = "output/%d-%d.%s" % (timestamp, rating, config["publishing"]["format"])
+            os.rename(output_file_path, output_file_path_with_rating)
+            publish_video(output_file_path_with_rating,
+                "%d-%d.%s" % (timestamp, rating, config["publishing"]["format"]), config["publishing"])
+    else:
+        os.rename("tmp/video2.h264", output_file_path)
+        publish_video(output_file_path, file_name, config["publishing"])
 
     file_number = 1
     total_video_length = 0
@@ -90,16 +95,21 @@ def process_video():
     first_video_started_at = 0
     last_video_ended_at = 0
 
-def publish_video(path, dropbox_path):
-    print("Publishing video")
-    subprocess.call(["Dropbox-Uploader/dropbox_uploader.sh", "upload", path, dropbox_path])
-    print("Deleting file")
-    os.remove(path)
+def publish_video(path, file_name, composing_config):
+    if "dropbox_path" in composing_config:
+        print("Publishing video")
+        subprocess.call(["Dropbox-Uploader/dropbox_uploader.sh",
+            "upload", path,
+            composing_config["dropbox_path"] + file_name
+        ])
+    if composing_config["delete_local"]:
+        print("Deleting file")
+        os.remove(path)
     print("Done")
 
 
 with picamera.PiCamera() as camera:
-    camera.resolution = (1280, 720)
+    camera.resolution = (config['recording']['width'], config['recording']['height'])
     # camera.hflip = True
     # camera.vflip = True
     stream = picamera.PiCameraCircularIO(camera, seconds=config['recording']['margin'])
