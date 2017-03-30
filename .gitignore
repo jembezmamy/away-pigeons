@@ -1,2 +1,7 @@
 __pycache__
 tmp
+lib
+include
+bin
+.Python
+pip-selfcheck.json

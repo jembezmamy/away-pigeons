@@ -29,3 +29,7 @@ publishing:
   # dropbox_path: "profilowka/output/"
   delete_local: false
   format: "h264"
+training:
+  storage_path: "tmp/training_data"
+  sample_width: 32
+  sample_height: 32

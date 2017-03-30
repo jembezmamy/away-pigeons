@@ -2,5 +2,6 @@ picamera
 pillow
 numpy
 pyyaml
+tensorflow
 
-# + ffmpeg installed in $PATH
+# + ffmpeg and imagemagick installed in $PATH
