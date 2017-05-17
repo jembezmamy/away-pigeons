@@ -3,13 +3,16 @@ import sys
 import os
 import glob
 from random import randint
+import yaml
 
 # python3 extract_tiles.py input_glob_path output_directory
 
+config = yaml.safe_load(open("config.yml"))
+
 input_file_names = sys.argv[1:-2]
 output_path = sys.argv[-1]
-tile_width = 96
-tile_height = 96
+tile_width = config['training']['glipse_width']
+tile_height = config['training']['glipse_height']
 
 if not os.path.exists(output_path):
     os.makedirs(output_path)
