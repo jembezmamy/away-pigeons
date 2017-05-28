@@ -13,8 +13,8 @@ input_path = config['training']['storage_path']
 train_output_path = config['training']['storage_path'] + "/train.tfrecords"
 test_output_path = config['training']['storage_path'] + "/test.tfrecords"
 
-width = int(config['training']['sample_width'] / config['training']['crop_factor'])
-height = int(config['training']['sample_height'] / config['training']['crop_factor'])
+width = int(config['training']['example_width'] / config['training']['crop_factor'])
+height = int(config['training']['example_height'] / config['training']['crop_factor'])
 
 positive_file_names = glob.glob(input_path + "/positive/*.png")
 negative_file_names = glob.glob(input_path + "/negative/*.png")

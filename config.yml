@@ -31,9 +31,9 @@ publishing:
   format: "h264"
 training:
   storage_path: "tmp/training_data"
-  glipse_width: 96
-  glipse_height: 96
-  sample_width: 28
-  sample_height: 28
+  patch_width: 96
+  patch_height: 96
+  example_width: 28
+  example_height: 28
   crop_factor: 0.87
   grayscale: false

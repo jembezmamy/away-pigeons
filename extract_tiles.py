@@ -11,8 +11,8 @@ config = yaml.safe_load(open("config.yml"))
 
 input_file_names = sys.argv[1:-2]
 output_path = sys.argv[-1]
-tile_width = config['training']['glipse_width']
-tile_height = config['training']['glipse_height']
+tile_width = config['training']['patch_width']
+tile_height = config['training']['patch_height']
 
 if not os.path.exists(output_path):
     os.makedirs(output_path)

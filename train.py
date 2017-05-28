@@ -27,9 +27,6 @@ train_step = tf.contrib.layers.optimize_loss(
         learning_rate=0.001,
         optimizer="SGD")
 
-tf.add_to_collection("model", x)
-tf.add_to_collection("model", y)
-
 
 with tf.name_scope('accuracy'):
   with tf.name_scope('correct_prediction'):
