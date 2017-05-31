@@ -1,13 +1,10 @@
 import tensorflow as tf
 import model
 import yaml
-import sys
 import numpy as np
-from PIL import Image
 
 config = yaml.safe_load(open("config.yml"))
 
-input_path      = sys.argv[1]
 model_path      = config['training']['storage_path'] + "/model"
 output_path     = config['training']['storage_path'] + "/classified"
 width           = config['training']['example_width']
@@ -39,23 +36,26 @@ y_predictions = tf.nn.softmax(y)
 
 saver = tf.train.Saver()
 
-with tf.Session()  as sess:
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(coord=coord)
+def classify(input_path):
+    with tf.Session()  as sess:
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
 
-    saver.restore(sess, tf.train.latest_checkpoint(config['training']['storage_path']))
+        saver.restore(sess, tf.train.latest_checkpoint(config['training']['storage_path']))
 
-    batch_xs, shape = sess.run([patches, patches_shape], feed_dict={file_name: input_path})
-    predictions = sess.run(y_predictions, feed_dict={x: batch_xs, training: False})
-    v_count = shape[1]
+        batch_xs, shape = sess.run([patches, patches_shape], feed_dict={file_name: input_path})
+        predictions = sess.run(y_predictions, feed_dict={x: batch_xs, training: False})
+        h_count = shape[2]
 
-    predictions = [[
-        p[1],
-        int((i % v_count + 0.5) * patch_width),
-        int((i / v_count + 0.5) * patch_height)
-    ] for i, p in enumerate(predictions)]
-    predictions.sort(key=lambda tup: tup[0], reverse=True)
-    print predictions
+        predictions = [[
+            p[1],
+            int((i % h_count) * patch_width / 4 + patch_width / 2),
+            int(int(i / h_count) * patch_height / 4 + patch_height / 2)
+        ] for i, p in enumerate(predictions)]
 
-    coord.request_stop()
-    coord.join(threads)
+        predictions.sort(key=lambda tup: tup[0], reverse=True)
+
+        coord.request_stop()
+        coord.join(threads)
+
+    return predictions
