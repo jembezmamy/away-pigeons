@@ -12,9 +12,7 @@ import math
 config = yaml.safe_load(open("config.yml"))
 
 input_file_names = sys.argv[1:-2]
-output_path = config['training']['storage_path']
-tile_width = config['training']['patch_width']
-tile_height = config['training']['patch_height']
+output_path = "{}/images".format(config['training']['storage_path'])
 
 if not os.path.exists(output_path):
     os.makedirs(output_path)
@@ -25,15 +23,15 @@ if not os.path.exists("{}/negative".format(output_path)):
 
 previous_tiles = []
 
-def intersects_with(x, y, other_tiles):
+def intersects_with(x0, y0, x1, y1, other_tiles):
     for tile in other_tiles:
-        if abs(tile[0] - x) < tile_width and abs(tile[1] - y) < tile_height:
+        if x0 <= tile[2] and x1 >= tile[0] and y0 <= tile[3] and y1 >= tile[1]:
             return True
     return False
 
-def save_tile(input_file_name, x, y, output_file_name):
+def save_tile(input_file_name, x0, y0, x1, y1, output_file_name):
     subprocess.call([
-        "convert", "-crop", "{}x{}+{}+{}".format(tile_width, tile_height, x - tile_width/2, y - tile_width/2),
+        "convert", "-crop", "{}x{}+{}+{}".format(x1 - x0, y1 - y0, x0, y0),
         input_file_name, "+repage", output_file_name
     ])
 
@@ -48,29 +46,35 @@ for i, file_name in enumerate(input_file_names):
     if os.path.exists(xml_file_name):
         pascal_voc = xml.etree.ElementTree.parse(xml_file_name).getroot()
         for rectangle in pascal_voc.iter("object"):
-            x = math.floor((int(rectangle.find("*/xmin").text) + int(rectangle.find("*/xmax").text)) / 2)
-            y = math.floor((int(rectangle.find("*/ymin").text) + int(rectangle.find("*/ymax").text)) / 2)
+            x0 = int(rectangle.find("*/xmin").text)
+            x1 = int(rectangle.find("*/xmax").text)
+            y0 = int(rectangle.find("*/ymin").text)
+            y1 = int(rectangle.find("*/ymax").text)
             positive_count += 1
-            save_tile(file_name, x, y, "{}/positive/{}-{}.png".format(output_path, i, positive_count))
-            local_tiles.append([x, y])
-            previous_tiles.append([x, y])
+            save_tile(file_name, x0, y0, x1, y1, "{}/positive/{}-{}.jpg".format(output_path, i, positive_count))
+            local_tiles.append([x0, y0, x1, y1])
+            previous_tiles.append([x0, y0, x1, y1])
     negative_count = 0
-    for _ in range(positive_count):
+    for j in range(positive_count):
         while True:
-            x = randint(0, width - tile_width) + tile_width/2
-            y = randint(0, height - tile_height) + tile_height/2
-            if not intersects_with(x, y, local_tiles):
+            w = local_tiles[j][2] - local_tiles[j][0]
+            h = local_tiles[j][3] - local_tiles[j][1]
+            x0 = randint(0, width - w)
+            y0 = randint(0, height - h)
+            x1 = x0 + w
+            y1 = y0 + h
+            if not intersects_with(x0, y0, x1, y1, local_tiles):
                 break
-        local_tiles.append([x, y])
+        local_tiles.append([x0, y0, x1, y1])
         negative_count += 1
-        save_tile(file_name, x, y, "{}/negative/{}-{}.png".format(output_path, i, negative_count))
+        save_tile(file_name, x0, y0, x1, y1, "{}/negative/{}-{}.jpg".format(output_path, i, negative_count))
     j = 0
     while j < len(previous_tiles):
         tile = previous_tiles[j]
-        if not intersects_with(tile[0], tile[1], local_tiles):
-            local_tiles.append([x, y])
+        if not intersects_with(tile[0], tile[1], tile[2], tile[3], local_tiles):
+            local_tiles.append([tile[0], tile[1], tile[2], tile[3]])
             negative_count += 1
-            save_tile(file_name, tile[0], tile[1], "{}/negative/{}-{}.png".format(output_path, i, negative_count))
+            save_tile(file_name, tile[0], tile[1], tile[2], tile[3], "{}/negative/{}-{}.jpg".format(output_path, i, negative_count))
             del previous_tiles[j]
         else:
             j += 1
