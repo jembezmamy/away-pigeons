@@ -1,6 +1,7 @@
 import tensorflow as tf
 import yaml
 import numpy as np
+from vendor.MeanShift_py import mean_shift as ms
 import re
 import time
 
@@ -98,3 +99,24 @@ def classify(input_path):
     print('\nEvaluation time: {:.3f}s\n'.format(end-start))
 
     return results
+
+
+def cluster(predictions):
+    points = np.array([[x,y] for prediction, x, y in predictions if prediction > 0.5])
+    mean_shifter = ms.MeanShift()
+    result = mean_shifter.cluster(points, kernel_bandwidth = (patch_width + patch_height) / 2)
+
+    clusters = np.zeros([len(set(result.cluster_ids)), 3])
+    for i, id in enumerate(result.cluster_ids):
+        if clusters[id][0] == 0:
+            clusters[id][0] = int(result.shifted_points[i][0])
+            clusters[id][1] = int(result.shifted_points[i][1])
+        clusters[id][2] = max(
+            clusters[id][2],
+            int(
+                np.linalg.norm(clusters[id][0:2] - result.original_points[i][0:2])
+                + (patch_width + patch_height) / 4
+            )
+        )
+
+    return clusters

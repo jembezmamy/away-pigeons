@@ -1,3 +1,6 @@
 [submodule "vendor/hub"]
 	path = vendor/hub
 	url = https://github.com/tensorflow/hub
+[submodule "vendor/MeanShift_py"]
+	path = vendor/MeanShift_py
+	url = https://github.com/mattnedrich/MeanShift_py
